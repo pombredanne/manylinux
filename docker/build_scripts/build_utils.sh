@@ -2,8 +2,16 @@
 # Helper utilities for build
 
 PYTHON_DOWNLOAD_URL=https://www.python.org/ftp/python
-OPENSSL_DOWNLOAD_URL=http://www.openssl.org/source
+# XXX: the official https server at www.openssl.org cannot be reached
+# with the old versions of openssl and curl in Centos 5.11 hence the fallback
+# to the ftp mirror:
+OPENSSL_DOWNLOAD_URL=ftp://ftp.openssl.org/source
+# Ditto the curl sources
+CURL_DOWNLOAD_URL=http://curl.askapache.com/download
+
 GET_PIP_URL=https://bootstrap.pypa.io/get-pip.py
+
+AUTOCONF_DOWNLOAD_URL=http://ftp.gnu.org/gnu/autoconf
 
 
 function check_var {
@@ -112,4 +120,46 @@ function build_openssl {
     tar -xzf ${openssl_fname}.tar.gz
     (cd ${openssl_fname} && do_openssl_build)
     rm -rf ${openssl_fname} ${openssl_fname}.tar.gz
+}
+
+
+function do_curl_build {
+    LIBS=-ldl ./configure --with-ssl --disable-shared > /dev/null
+    make > /dev/null
+    make install > /dev/null
+}
+
+
+function build_curl {
+    local curl_fname=$1
+    check_var ${curl_fname}
+    local curl_sha256=$2
+    check_var ${curl_sha256}
+    check_var ${CURL_DOWNLOAD_URL}
+    curl -sLO ${CURL_DOWNLOAD_URL}/${curl_fname}.tar.bz2
+    check_sha256sum ${curl_fname}.tar.bz2 ${curl_sha256}
+    tar -jxf ${curl_fname}.tar.bz2
+    (cd ${curl_fname} && do_curl_build)
+    rm -rf ${curl_fname} ${curl_fname}.tar.bz2
+}
+
+
+function do_standard_install {
+    ./configure > /dev/null
+    make > /dev/null
+    make install > /dev/null
+}
+
+
+function build_autoconf {
+    local autoconf_fname=$1
+    check_var ${autoconf_fname}
+    local autoconf_sha256=$2
+    check_var ${autoconf_sha256}
+    check_var ${AUTOCONF_DOWNLOAD_URL}
+    curl -sLO ${AUTOCONF_DOWNLOAD_URL}/${autoconf_fname}.tar.gz
+    check_sha256sum ${autoconf_fname}.tar.gz ${autoconf_sha256}
+    tar -zxf ${autoconf_fname}.tar.gz
+    (cd ${autoconf_fname} && do_standard_install)
+    rm -rf ${autoconf_fname} ${autoconf_fname}.tar.gz
 }
